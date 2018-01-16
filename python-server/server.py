@@ -1,26 +1,32 @@
 #!/usr/bin/env python
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
+import traceback
 
 # HTTPRequestHandler class
 class ServerModule(BaseHTTPRequestHandler):
 
-  # GET
+    VALID_ROUTE_PREFIX = '/recipes'
+    SUCCESS_MESSAGE = json.dumps({"msg": "Success"})
+    BAD_REQUEST_MESSAGE = json.dumps({"msg": "Bad Request"})
+
+    # GET
     def do_GET(self):
-        # Send response status code
-        self.send_response(200)
+        result = ServerModule.validate_request(self.path)
+        if result[0]:
+            recipe_id = result[1]
+            if recipe_id is not None:
+                print ("Recipe ID : " + str(recipe_id))
+            else:
+                print ("List of Recipes")
+            ServerModule.success(self)
+        else:
+            ServerModule.bad_request(self)
 
-        # Send headers
-        self.send_header('Content-type','text/html')
-        self.end_headers()
-
-        # Send message back to client
-        message = "Hello world!"
-        # Write content as utf-8 data
-        self.wfile.write(bytes(message, "utf8"))
         return
 
-
+    # POST
     def do_POST(self):
         self.send_response(200)
 
@@ -29,12 +35,12 @@ class ServerModule(BaseHTTPRequestHandler):
         self.end_headers()
 
         # Send message back to client
-        message = "Good bye world!"
+        message = self.path
         # Write content as utf-8 data
         self.wfile.write(bytes(message, "utf8"))
         return
 
-
+    # PUT
     def do_PUT(self):
         self.send_response(200)
 
@@ -43,12 +49,12 @@ class ServerModule(BaseHTTPRequestHandler):
         self.end_headers()
 
         # Send message back to client
-        message = "Updating world!"
+        message = self.path
         # Write content as utf-8 data
         self.wfile.write(bytes(message, "utf8"))
         return
 
-
+    # DELETE
     def do_DELETE(self):
         self.send_response(200)
 
@@ -57,10 +63,45 @@ class ServerModule(BaseHTTPRequestHandler):
         self.end_headers()
 
         # Send message back to client
-        message = "Deleting world!"
+        message = self.path
         # Write content as utf-8 data
         self.wfile.write(bytes(message, "utf8"))
         return
+
+    @staticmethod
+    def validate_request(path):
+        if(ServerModule.VALID_ROUTE_PREFIX in path):
+            print ("Path : " + path)
+            path = path.replace(ServerModule.VALID_ROUTE_PREFIX, '')
+            id = path.replace('/','')
+            if (len(id) > 0):
+                try:
+                    id = int(id)
+                    return True, id
+                except ValueError:
+                    print (traceback.format_exc())
+                    return False, None
+            else:
+                return True, None
+        else:
+            return False, None
+
+    @staticmethod
+    def success(req):
+        req.send_response(200)
+        req.send_header('Content-type','application/json')
+        req.end_headers()
+        req.wfile.write(bytes(ServerModule.SUCCESS_MESSAGE, "utf8"))
+        return req
+
+    @staticmethod
+    def bad_request(req):
+        req.send_response(400)
+        req.send_header('Content-type','application/json')
+        req.end_headers()
+        req.wfile.write(bytes(ServerModule.BAD_REQUEST_MESSAGE, "utf8"))
+        return req
+
 
 def run():
     print('starting server...')
