@@ -15,6 +15,7 @@ class ServerModule(BaseHTTPRequestHandler):
     SUCCESS_MESSAGE = {"msg": "Success"}
     BAD_REQUEST_MESSAGE = json.dumps({"msg": "Bad Request"})
 
+
     # GET
     def do_GET(self):
         request_param_hash = ServerModule.validate_request(self.path)
@@ -37,16 +38,24 @@ class ServerModule(BaseHTTPRequestHandler):
 
         return
 
+
     # POST
     def do_POST(self):
         request_param_hash = ServerModule.validate_request(self.path)
 
         try:
-            content_length = int(self.headers['Content-Length'])
-            post_data = self.rfile.read(content_length)
-            input_data = json.loads(post_data.decode("utf-8"))
+            if(request_param_hash['valid'] and (request_param_hash['id'] is None)):
+                content_length = int(self.headers['Content-Length'])
+                post_data = self.rfile.read(content_length)
+                input_data = json.loads(post_data.decode("utf-8"))
 
-            if (insert(input_data)):
+                if (insert(input_data)):
+                    ServerModule.success(self)
+                else:
+                    ServerModule.bad_request(self)
+            elif((request_param_hash['valid'] and request_param_hash['rating']) and \
+                   (request_param_hash['id'] is not None)):
+                print("Rating API hit..")
                 ServerModule.success(self)
             else:
                 ServerModule.bad_request(self)
@@ -58,17 +67,26 @@ class ServerModule(BaseHTTPRequestHandler):
 
     # PUT
     def do_PUT(self):
-        self.send_response(200)
+        request_param_hash = ServerModule.validate_request(self.path)
 
-        # Send headers
-        self.send_header('Content-type','text/html')
-        self.end_headers()
+        try:
+            if(request_param_hash['valid'] and (request_param_hash['id'] is not None)):
+                content_length = int(self.headers['Content-Length'])
+                post_data = self.rfile.read(content_length)
+                input_data = json.loads(post_data.decode("utf-8"))
 
-        # Send message back to client
-        message = self.path
-        # Write content as utf-8 data
-        self.wfile.write(bytes(message, "utf8"))
+                if (update(request_param_hash['id'], input_data)):
+                    ServerModule.success(self)
+                else:
+                    ServerModule.bad_request(self)
+            else:
+                ServerModule.bad_request(self)
+
+        except:
+            ServerModule.bad_request(self)
+
         return
+
 
     # DELETE
     def do_DELETE(self):
