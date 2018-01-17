@@ -72,16 +72,22 @@ class ServerModule(BaseHTTPRequestHandler):
 
     # DELETE
     def do_DELETE(self):
-        self.send_response(200)
+        request_param_hash = ServerModule.validate_request(self.path)
 
-        # Send headers
-        self.send_header('Content-type','text/html')
-        self.end_headers()
+        try:
+            if (request_param_hash['valid']):
+                if(request_param_hash['id'] is not None):
+                    id = request_param_hash['id']
+                    delete(id)
+                    ServerModule.success(self)
+                else:
+                    ServerModule.bad_request(self)
+            else:
+                ServerModule.bad_request(self)
+        except:
+            print(traceback.format_exc())
+            ServerModule.bad_request(self)
 
-        # Send message back to client
-        message = self.path
-        # Write content as utf-8 data
-        self.wfile.write(bytes(message, "utf8"))
         return
 
 
