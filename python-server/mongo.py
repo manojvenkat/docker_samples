@@ -58,9 +58,21 @@ def search(search_attrs):
 	results = recipes_collection.find({
 		'$and': query_params
 	})
-
 	results = [i for i in results]
-	return results
+	objectid_list = [i['_id'] for i in results]
+
+	if 'rating' in search_attrs:
+		recipes_with_ratings = recipes_collection.find({
+			'$and': [
+				{'recipe_id' : {'$in': objectid_list}},
+				{'rating' : {'$gte': search_attrs['rating']}}
+			]
+		})
+		recipes_with_ratings = [i['recipe_id'] for i in recipes_with_ratings]
+		filtered_results = [i for i in results if i['_id']]
+		return filtered_results
+	else:
+		return results
 
 
 ## {"rating": 5}
@@ -123,6 +135,7 @@ def clean_input(recipe_attrs):
 		cleaned_recipe_attrs[i] =  recipe_attrs[i]
 	return cleaned_recipe_attrs
 
+
 def clean_search_input(search_attrs):
 	if ("name" in search_attrs):
 		if(not len(search_attrs["name"]) > 0):
@@ -141,7 +154,13 @@ def clean_search_input(search_attrs):
 		if (not (len(search_attrs['vegetarian']) > 0)):
 			search_attrs.pop("vegetarian")
 
+	if ("rating" in search_attrs):
+		if ((not instanceof(search_attrs['rating'], int)) \
+			or (not rating_value_validation(search_attrs['rating'])))
+			search_attrs.pop('rating')
+
 	return search_attrs
+
 
 def unwrap_variables(recipe_attrs):
 	try:
