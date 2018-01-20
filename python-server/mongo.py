@@ -1,11 +1,14 @@
+import datetime
+import re
+import traceback
 from pymongo import MongoClient
 from bson.objectid import ObjectId
-import traceback
 
 
 mongo_client = MongoClient('localhost:27017')
 db = mongo_client.hellofresh_db
 recipes_collection = db.recipes
+recipe_ratings = db.recipe_ratings
 NAME_MIN_LENGTH = 3
 VALID_KEYS_LIST = ['name', 'prep_time', 'difficulty', 'vegetarian']
 
@@ -14,6 +17,7 @@ VALID_KEYS_LIST = ['name', 'prep_time', 'difficulty', 'vegetarian']
 def insert(recipe_attrs):
 	if validate_input(recipe_attrs):
 		recipe_attrs = clean_input(recipe_attrs)
+		recipe_attrs['created_at'] = datetime.datetime.now()
 		recipes_collection.insert_one(recipe_attrs)
 		return True
 	else:
@@ -37,9 +41,44 @@ def get_recipe(id):
 		return None
 
 
+def search(search_attrs):
+	search_attrs = clean_search_input(search_attrs)
+	query_params = []
+	if "prep_time" in search_attrs:
+		query_params.append({ 'prep_time' : {'$lte': search_attrs["prep_time"]}})
+	if "difficulty" in search_attrs:
+		query_params.append({ 'difficulty' : {'$lte': search_attrs["difficulty"]}})
+	if "vegetarian" in search_attrs:
+		query_params.append({ 'vegetarian' : {'$in': search_attrs["vegetarian"]}})
+	if "name" in search_attrs:
+		regex_string = '.*' + search_attrs["name"] + '.*'
+		regex = re.compile(regex_string)
+		query_params.append({ 'name' : {'$regex': regex}})
+
+	results = recipes_collection.find({
+		'$and': query_params
+	})
+
+	results = [i for i in results]
+	return results
+
+
+## {"rating": 5}
+def rate_recipe(id, recipe_rating_attrs):
+	if validate_rating_input(recipe_rating_attrs):
+		recipe_ratings.insert_one({
+			"rating": recipe_rating_attrs['rating'], 
+			"recipe_id": ObjectId(id), 
+			"created_at": datetime.datetime.now()
+		})
+		return True
+	else:
+		print("Verify the input.")
+		return False
+
+
 def update(id, recipe_attrs):
 	if validate_input(recipe_attrs, True):
-		print("bla")
 		recipe_attrs = clean_input(recipe_attrs)
 		recipes_collection.update({'_id': ObjectId(id)}, {"$set": recipe_attrs}, upsert=False)
 		return True
@@ -51,11 +90,6 @@ def update(id, recipe_attrs):
 def delete(id):
 	result = recipes_collection.delete_one({'_id': ObjectId(id)})
 	print(result)
-	return True
-
-
-def rate(id, rating):
-	recipes_collection.update({'_id': id}, {"$set": {"rating": rating}})
 	return True
 
 
@@ -89,6 +123,25 @@ def clean_input(recipe_attrs):
 		cleaned_recipe_attrs[i] =  recipe_attrs[i]
 	return cleaned_recipe_attrs
 
+def clean_search_input(search_attrs):
+	if ("name" in search_attrs):
+		if(not len(search_attrs["name"]) > 0):
+			search_attrs.pop("name")
+
+	if ("prep_time" in search_attrs):
+		if(not isinstance(search_attrs["prep_time"], int)):
+			search_attrs.pop("prep_time")
+
+	if ("difficulty" in search_attrs):
+		if((not isinstance(search_attrs["difficulty"], int)) \
+			or (not difficulty_value_validation(search_attrs["difficulty"]))):
+			search_attrs.pop("difficulty")
+
+	if ("vegetarian" in search_attrs):
+		if (not (len(search_attrs['vegetarian']) > 0)):
+			search_attrs.pop("vegetarian")
+
+	return search_attrs
 
 def unwrap_variables(recipe_attrs):
 	try:
@@ -126,3 +179,10 @@ def difficulty_value_validation(val):
 
 def name_length_validation(name):
 	return (len(name) > NAME_MIN_LENGTH)
+
+
+def validate_rating_input(recipe_rating_attrs):
+	return ('rating' in recipe_rating_attrs) and \
+		(recipe_rating_attrs['rating'] in range(1,5))
+
+

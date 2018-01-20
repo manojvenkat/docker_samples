@@ -20,7 +20,7 @@ class ServerModule(BaseHTTPRequestHandler):
     def do_GET(self):
         request_param_hash = ServerModule.validate_request(self.path)
         try:
-            if (request_param_hash['valid']):
+            if (request_param_hash['valid'] and not request_param_hash['search']):
                 if(request_param_hash['id'] is not None):
                     ## Get the recipe with id 
                     recipe_json = json.loads(json_util.dumps(get_recipe(request_param_hash['id'])))
@@ -42,25 +42,31 @@ class ServerModule(BaseHTTPRequestHandler):
     # POST
     def do_POST(self):
         request_param_hash = ServerModule.validate_request(self.path)
-
         try:
-            if(request_param_hash['valid'] and (request_param_hash['id'] is None)):
+            if(request_param_hash['valid']):
                 content_length = int(self.headers['Content-Length'])
                 post_data = self.rfile.read(content_length)
                 input_data = json.loads(post_data.decode("utf-8"))
 
-                if (insert(input_data)):
+                if((request_param_hash['id'] is None) and (not request_param_hash['search'])):
+                    if (insert(input_data)):
+                        ServerModule.success(self)
+                    else:
+                        ServerModule.bad_request(self)
+                elif(request_param_hash['rating'] and (request_param_hash['id'] is not None)):
+                    print ("bla")
+                    rate_recipe(request_param_hash['id'], input_data)
                     ServerModule.success(self)
+                elif(request_param_hash['search']):
+                    data = search(input_data)
+                    data = json.loads(json_util.dumps(data))
+                    ServerModule.success(self, data)
                 else:
                     ServerModule.bad_request(self)
-            elif((request_param_hash['valid'] and request_param_hash['rating']) and \
-                   (request_param_hash['id'] is not None)):
-                print("Rating API hit..")
-                ServerModule.success(self)
             else:
                 ServerModule.bad_request(self)
-
         except:
+            print(traceback.format_exc())
             ServerModule.bad_request(self)
 
         return
@@ -114,34 +120,45 @@ class ServerModule(BaseHTTPRequestHandler):
         list_url_regex = re.compile("/recipes[/]?")
         id_url_regex = re.compile("/recipes/[^()][/]?")
         rating_url_regex = re.compile("/recipes/[^()]/rating[/]?")
+        search_url_regex = re.compile("/search/recipes")
 
         is_list_url = list_url_regex.match(path)
         is_id_url = id_url_regex.match(path)
-        is_rating_url = rating_url_regex.match(path)
+        is_search_url = search_url_regex.match(path)
 
         path_split = [i for i in path.split("/") if len(i) > 0]
 
-        request_param_hash = {"valid": False, "id": None, "rating": False}
+        is_rating_url = 'rating' in path_split
+
+        request_param_hash = {"valid": False, "id": None, "rating": False, "search": False}
 
         if(is_rating_url is not None):
             id = path_split[1]
-            request_param_hash['valid'] = True
             request_param_hash['id'] = id
+            request_param_hash['valid'] = True
             request_param_hash['rating'] = True
+            request_param_hash['search'] = False
         elif(is_id_url is not None):
             id = path_split[1]
-            request_param_hash['valid'] = True
             request_param_hash['id'] = id
-            request_param_hash['rating'] = False
-        elif(is_list_url is not None):
             request_param_hash['valid'] = True
-            request_param_hash['id'] = None
             request_param_hash['rating'] = False
+            request_param_hash['search'] = False
+        elif(is_list_url is not None):
+            request_param_hash['id'] = None
+            request_param_hash['valid'] = True
+            request_param_hash['rating'] = False
+            request_param_hash['search'] = False
+        elif(is_search_url is not None):
+            request_param_hash['id'] = None
+            request_param_hash['valid'] = True
+            request_param_hash['rating'] = False
+            request_param_hash['search'] = True
 
+        print (request_param_hash)
         return request_param_hash            
 
 
-    @staticmethod
     def success(req, content=None):
         req.send_response(200)
         req.send_header('Content-type','application/json')
@@ -153,7 +170,6 @@ class ServerModule(BaseHTTPRequestHandler):
         req.wfile.write(bytes(response_content, "utf8"))
         return req
 
-    @staticmethod
     def bad_request(req):
         req.send_response(400)
         req.send_header('Content-type','application/json')
