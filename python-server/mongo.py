@@ -55,20 +55,33 @@ def search(search_attrs):
 		regex = re.compile(regex_string)
 		query_params.append({ 'name' : {'$regex': regex}})
 
-	results = recipes_collection.find({
-		'$and': query_params
-	})
+
+	if 'rating' in search_attrs:
+		rating = search_attrs.pop('rating')
+	else:
+		rating = None
+
+
+	if (len(query_params) > 0):
+		results = recipes_collection.find({
+			'$and': query_params
+		})
+	else:
+		results = recipes_collection.find()
+
 	results = [i for i in results]
 	objectid_list = [i['_id'] for i in results]
 
-	if 'rating' in search_attrs:
+	if rating is not None:
+		print(objectid_list)
 		recipes_with_ratings = recipes_collection.find({
 			'$and': [
 				{'recipe_id' : {'$in': objectid_list}},
-				{'rating' : {'$gte': search_attrs['rating']}}
+				{'rating' : {'$gte': rating}}
 			]
 		})
 		recipes_with_ratings = [i['recipe_id'] for i in recipes_with_ratings]
+		print(recipes_with_ratings)
 		filtered_results = [i for i in results if i['_id']]
 		return filtered_results
 	else:
@@ -78,12 +91,16 @@ def search(search_attrs):
 ## {"rating": 5}
 def rate_recipe(id, recipe_rating_attrs):
 	if validate_rating_input(recipe_rating_attrs):
-		recipe_ratings.insert_one({
-			"rating": recipe_rating_attrs['rating'], 
-			"recipe_id": ObjectId(id), 
-			"created_at": datetime.datetime.now()
-		})
-		return True
+		if(get_recipe(id) is not None):
+			recipe_ratings.insert_one({
+				"rating": recipe_rating_attrs['rating'], 
+				"recipe_id": ObjectId(id), 
+				"created_at": datetime.datetime.now()
+			})
+			return True
+		else:
+			print("Recipe with id : " + str(id) + " doesn't exist..")
+			return False
 	else:
 		print("Verify the input.")
 		return False
@@ -155,8 +172,8 @@ def clean_search_input(search_attrs):
 			search_attrs.pop("vegetarian")
 
 	if ("rating" in search_attrs):
-		if ((not instanceof(search_attrs['rating'], int)) \
-			or (not rating_value_validation(search_attrs['rating'])))
+		if ((not isinstance(search_attrs['rating'], int)) \
+			or (not (search_attrs['rating'] in range(1,6)))):
 			search_attrs.pop('rating')
 
 	return search_attrs
@@ -202,6 +219,4 @@ def name_length_validation(name):
 
 def validate_rating_input(recipe_rating_attrs):
 	return ('rating' in recipe_rating_attrs) and \
-		(recipe_rating_attrs['rating'] in range(1,5))
-
-
+		(recipe_rating_attrs['rating'] in range(1,6))

@@ -54,7 +54,6 @@ class ServerModule(BaseHTTPRequestHandler):
                     else:
                         ServerModule.bad_request(self)
                 elif(request_param_hash['rating'] and (request_param_hash['id'] is not None)):
-                    print ("bla")
                     rate_recipe(request_param_hash['id'], input_data)
                     ServerModule.success(self)
                 elif(request_param_hash['search']):
@@ -129,10 +128,10 @@ class ServerModule(BaseHTTPRequestHandler):
         path_split = [i for i in path.split("/") if len(i) > 0]
 
         is_rating_url = 'rating' in path_split
-
+        print (is_rating_url)
         request_param_hash = {"valid": False, "id": None, "rating": False, "search": False}
 
-        if(is_rating_url is not None):
+        if(is_rating_url not in [None, False]):
             id = path_split[1]
             request_param_hash['id'] = id
             request_param_hash['valid'] = True
