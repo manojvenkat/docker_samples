@@ -81,8 +81,7 @@ def search(search_attrs):
 			]
 		})
 		recipes_with_ratings = [i['recipe_id'] for i in recipes_with_ratings]
-		print(recipes_with_ratings)
-		filtered_results = [i for i in results if i['_id']]
+		filtered_results = [i for i in results if i['_id'] in recipes_with_ratings]
 		return filtered_results
 	else:
 		return results
