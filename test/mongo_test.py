@@ -1,5 +1,4 @@
 import unittest
-import types
 import os
 import sys
 from pymongo import MongoClient
