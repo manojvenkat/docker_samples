@@ -1,18 +1,24 @@
 import datetime
+import os
 import re
 import traceback
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from mongo_helper import *
 
+try:
+	is_test = os.environ['test']
+except:
+	is_test = None
 
-mongo_client = MongoClient('localhost:27017')
-db = mongo_client.hellofresh_db
+mongo_client = MongoClient('mongodb://mongodb:27017')
+if (is_test is not None):
+	db = mongo_client.hellofresh_test_db
+else:
+	db = mongo_client.hellofresh_db
+
 recipes_collection = db.recipes
 recipe_ratings = db.recipe_ratings
-NAME_MIN_LENGTH = 3
-VALID_KEYS_LIST = ['name', 'prep_time', 'difficulty', 'vegetarian']
-
 
 def insert(recipe_attrs):
 	if validate_input(recipe_attrs):

@@ -1,3 +1,6 @@
+NAME_MIN_LENGTH = 3
+VALID_KEYS_LIST = ['name', 'prep_time', 'difficulty', 'vegetarian']
+
 def validate_input(recipe_attrs, update=False):
 	if (not update):
 		try:

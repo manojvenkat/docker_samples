@@ -1,8 +1,8 @@
+Check it's working in Docker - Easy - 30 min - Done
 Security verification - Use protection for APIs - Should be easy to implement - 30 min
-Check it's working in Docker - Easy - 30 min
-Validate the REST-fulness  - Easy - 30 min
 Write unit tests. A few to show it's testable - 30 min
 Write Functional tests for the APIs - Write this using requests module
+Validate the REST-fulness  - Easy - 30 min
 Pagination - 1 hours
 Python code standards - 30 mins
 
