@@ -1,14 +1,15 @@
+import sys
+sys.path.append('../python_server')
 import unittest
 import json
 import types
 import os
-import sys
 import requests
 from pymongo import MongoClient
 from bson.objectid import ObjectId
 from test_helper import *
+from security_keys import *
 
-sys.path.append('../python_server')
 os.environ["test"] = "True"
 test_client = mongo_client = MongoClient('mongodb://mongodb:27017')
 db = mongo_client.hellofresh_test_db
@@ -23,7 +24,7 @@ class IntegrationTestModule(unittest.TestCase):
 	def test_create_api(self, clean=True):
 		recipe_attrs = {"name": "Chicken Tikka Masala", \
 			"prep_time": 120, "difficulty": 3, "vegetarian": True}
-		headers = {'content-type': 'application/json'}
+		headers = {'content-type': 'application/json', 'secret_key': SECRET_KEY}
 		response = requests.post("http://localhost:8080/recipes", \
 			data=json.dumps(recipe_attrs), headers=headers)
 		self.assertEqual(response.status_code, 200)
@@ -36,7 +37,7 @@ class IntegrationTestModule(unittest.TestCase):
 			"prep_time": 120, "difficulty": 3, "vegetarian": True}
 		recipe_attrs_1 = {"name": "Chicken Butter Masala", \
 			"prep_time": 100, "difficulty": 3, "vegetarian": False}
-		headers = {'content-type': 'application/json'}
+		headers = {'content-type': 'application/json', 'secret_key': SECRET_KEY}
 		create_response = requests.post("http://localhost:8080/recipes", \
 			data=json.dumps(recipe_attrs), headers=headers)
 		create_response = requests.post("http://localhost:8080/recipes", \
@@ -56,7 +57,7 @@ class IntegrationTestModule(unittest.TestCase):
 	def test_rating_api(self, clean=True):
 		recipe_attrs = {"name": "Chicken Tikka Masala", \
 			"prep_time": 120, "difficulty": 3, "vegetarian": True}
-		headers = {'content-type': 'application/json'}
+		headers = {'content-type': 'application/json', 'secret_key': SECRET_KEY}
 		create_response = requests.post("http://localhost:8080/recipes", \
 			data=json.dumps(recipe_attrs), headers=headers)
 		self.assertEqual(create_response.status_code, 200)

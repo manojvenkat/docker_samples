@@ -6,6 +6,7 @@ from bson import json_util
 import json
 import traceback
 from mongo import *
+from security_keys import *
 
 # HTTPRequestHandler class
 class ServerModule(BaseHTTPRequestHandler):
@@ -42,18 +43,24 @@ class ServerModule(BaseHTTPRequestHandler):
     # POST
     def do_POST(self):
         request_param_hash = ServerModule.validate_request(self.path)
+        authenticated = (self.headers['secret_key'] == SECRET_KEY)
+        is_rating_api_call = (request_param_hash['rating'] and (request_param_hash['id'] is not None))
+        is_create_api_call = (request_param_hash['id'] is None) and (not request_param_hash['search'])
         try:
             if(request_param_hash['valid']):
                 content_length = int(self.headers['Content-Length'])
                 post_data = self.rfile.read(content_length)
                 input_data = json.loads(post_data.decode("utf-8"))
 
-                if((request_param_hash['id'] is None) and (not request_param_hash['search'])):
-                    if (insert(input_data)):
-                        ServerModule.success(self)
+                if(is_create_api_call):
+                    if(authenticated):
+                        if (insert(input_data)):
+                            ServerModule.success(self)
+                        else:
+                            ServerModule.bad_request(self)
                     else:
-                        ServerModule.bad_request(self)
-                elif(request_param_hash['rating'] and (request_param_hash['id'] is not None)):
+                        ServerModule.bad_request(self, status_code=401)
+                elif(is_rating_api_call):
                     rate_recipe(request_param_hash['id'], input_data)
                     ServerModule.success(self)
                 elif(request_param_hash['search']):
@@ -73,22 +80,26 @@ class ServerModule(BaseHTTPRequestHandler):
     # PUT
     def do_PUT(self):
         request_param_hash = ServerModule.validate_request(self.path)
+        authenticated = (self.headers['secret_key'] == SECRET_KEY)
 
-        try:
-            if(request_param_hash['valid'] and (request_param_hash['id'] is not None)):
-                content_length = int(self.headers['Content-Length'])
-                post_data = self.rfile.read(content_length)
-                input_data = json.loads(post_data.decode("utf-8"))
+        if(authenticated):
+            try:
+                if(request_param_hash['valid'] and (request_param_hash['id'] is not None)):
+                    content_length = int(self.headers['Content-Length'])
+                    post_data = self.rfile.read(content_length)
+                    input_data = json.loads(post_data.decode("utf-8"))
 
-                if (update(request_param_hash['id'], input_data)):
-                    ServerModule.success(self)
+                    if (update(request_param_hash['id'], input_data)):
+                        ServerModule.success(self)
+                    else:
+                        ServerModule.bad_request(self)
                 else:
                     ServerModule.bad_request(self)
-            else:
-                ServerModule.bad_request(self)
 
-        except:
-            ServerModule.bad_request(self)
+            except:
+                ServerModule.bad_request(self)
+        else:
+            ServerModule.bad_request(self, status_code=401)
 
         return
 
@@ -96,20 +107,24 @@ class ServerModule(BaseHTTPRequestHandler):
     # DELETE
     def do_DELETE(self):
         request_param_hash = ServerModule.validate_request(self.path)
+        authenticated = (self.headers['secret_key'] == SECRET_KEY)
 
-        try:
-            if (request_param_hash['valid']):
-                if(request_param_hash['id'] is not None):
-                    id = request_param_hash['id']
-                    delete(id)
-                    ServerModule.success(self)
+        if(authenticated):
+            try:
+                if (request_param_hash['valid']):
+                    if(request_param_hash['id'] is not None):
+                        id = request_param_hash['id']
+                        delete(id)
+                        ServerModule.success(self)
+                    else:
+                        ServerModule.bad_request(self)
                 else:
                     ServerModule.bad_request(self)
-            else:
+            except:
+                print(traceback.format_exc())
                 ServerModule.bad_request(self)
-        except:
-            print(traceback.format_exc())
-            ServerModule.bad_request(self)
+        else:
+            ServerModule.bad_request(self, status_code=401)
 
         return
 
@@ -169,8 +184,8 @@ class ServerModule(BaseHTTPRequestHandler):
         req.wfile.write(bytes(response_content, "utf8"))
         return req
 
-    def bad_request(req):
-        req.send_response(400)
+    def bad_request(req, status_code=400):
+        req.send_response(status_code)
         req.send_header('Content-type','application/json')
         req.end_headers()
         req.wfile.write(bytes(ServerModule.BAD_REQUEST_MESSAGE, "utf8"))
