@@ -80,13 +80,14 @@ def search(search_attrs):
 
 	if rating is not None:
 		print(objectid_list)
-		recipes_with_ratings = recipes_collection.find({
+		recipes_with_ratings = recipe_ratings.find({
 			'$and': [
 				{'recipe_id' : {'$in': objectid_list}},
 				{'rating' : {'$gte': rating}}
 			]
 		})
 		recipes_with_ratings = [i['recipe_id'] for i in recipes_with_ratings]
+		print(recipes_with_ratings)
 		filtered_results = [i for i in results if i['_id'] in recipes_with_ratings]
 		return filtered_results
 	else:

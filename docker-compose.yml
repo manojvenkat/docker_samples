@@ -12,7 +12,7 @@ services:
             - mongodb
         ports:
           - "8080:8080"
-        command: bash -c "pip3 install pymongo && python /server/http/python-server/server.py"
+        command: bash -c "pip3 install -r /server/http/python_server/requirements.txt && python /server/http/python_server/server.py"
 
     mongodb:
         image: mvertes/alpine-mongo:3.2.3

@@ -3,6 +3,7 @@ import os
 import sys
 from pymongo import MongoClient
 from bson.objectid import ObjectId
+from test_helper import *
 
 sys.path.append('../python_server')
 os.environ["test"] = "True"
@@ -29,7 +30,7 @@ class MongoTestModule(unittest.TestCase):
 		else:
 			print "Insertion unsuccessful.."
 			assert False
-		clean_db()
+		clean_db(recipes_collection, recipe_ratings)
 
 
 	def test_list(self):
@@ -48,7 +49,7 @@ class MongoTestModule(unittest.TestCase):
 		else:
 			print "Insertion unsuccessful.."
 			assert False
-		clean_db()
+		clean_db(recipes_collection, recipe_ratings)
 
 
 	def test_get_recipe(self):
@@ -62,12 +63,8 @@ class MongoTestModule(unittest.TestCase):
 		else:
 			print "Insertion unsuccessful.."
 			assert False
-		clean_db()
+		clean_db(recipes_collection, recipe_ratings)
 
-
-def clean_db():
-	recipes_collection.remove({})
-	recipe_ratings.remove({})
 
 if __name__ == "__main__":
 	unittest.main()
